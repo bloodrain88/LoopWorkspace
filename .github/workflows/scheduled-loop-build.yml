@@ -1,0 +1,35 @@
+name: Scheduled Build Loop
+
+on:
+  schedule:
+    - cron: '0 0 */88 * *'
+
+jobs:
+  update-fork-and-build-loop:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+
+      - name: Update the fork
+        run: |
+          git remote add upstream https://github.com/original/repo.git
+          git fetch upstream
+          git checkout main
+          git merge upstream/main
+          git push origin main
+
+      - name: Trigger Build Loop
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const github = require('@actions/github');
+            const context = github.context;
+
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'build_loop.yml',  # Ensure this matches your build loop workflow file name
+              ref: 'main',
+            });
